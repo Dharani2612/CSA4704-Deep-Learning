@@ -1,0 +1,80 @@
+
+import numpy as np
+import matplotlib.pyplot as plt
+import tensorflow as tf
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import (
+    accuracy_score, precision_score,
+    recall_score, f1_score, confusion_matrix
+)
+
+np.random.seed(42)
+tf.random.set_seed(42)
+
+# Generate customer data
+X = np.random.randn(1000, 5)
+
+y = (
+    X[:,0] < -0.5
+).astype(int)
+
+y = np.logical_or(
+    y,
+    X[:,1] > 1
+).astype(int)
+
+Xtrain, Xtest, ytrain, ytest = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+scaler = StandardScaler()
+Xtrain = scaler.fit_transform(Xtrain)
+Xtest = scaler.transform(Xtest)
+
+model = tf.keras.Sequential([
+    tf.keras.layers.Input(shape=(5,)),
+    tf.keras.layers.Dense(64, activation="relu"),
+    tf.keras.layers.Dense(32, activation="relu"),
+    tf.keras.layers.Dense(16, activation="relu"),
+    tf.keras.layers.Dense(1, activation="sigmoid")
+])
+
+model.compile(
+    optimizer="adam",
+    loss="binary_crossentropy",
+    metrics=["accuracy"]
+)
+
+history = model.fit(
+    Xtrain, ytrain,
+    validation_split=0.2,
+    epochs=40,
+    batch_size=32,
+    verbose=0
+)
+
+# Evaluation
+prob = model.predict(Xtest, verbose=0).ravel()
+pred = (prob > 0.5).astype(int)
+
+print("Accuracy:", accuracy_score(ytest, pred))
+print("Precision:", precision_score(ytest, pred))
+print("Recall:", recall_score(ytest, pred))
+print("F1 Score:", f1_score(ytest, pred))
+print("Confusion Matrix:\n",
+      confusion_matrix(ytest, pred))
+
+# Training curves
+plt.plot(history.history["accuracy"], label="Training")
+plt.plot(history.history["val_accuracy"], label="Validation")
+plt.title("Accuracy")
+plt.legend()
+plt.show()
+
+plt.plot(history.history["loss"], label="Training")
+plt.plot(history.history["val_loss"], label="Validation")
+plt.title("Loss")
+plt.legend()
+plt.show()
