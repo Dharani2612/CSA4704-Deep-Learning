@@ -1,0 +1,84 @@
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+np.random.seed(42)
+
+# Generate 200 patient records
+n = 200
+hb = np.random.normal(13, 1.5, n)
+rbc = hb * 0.35 + np.random.normal(2.5, 0.5, n)
+glucose = np.random.normal(110, 20, n)
+cholesterol = glucose * 1.2 + np.random.normal(40, 15, n)
+bmi = np.random.normal(25, 4, n)
+
+df = pd.DataFrame({
+    "Haemoglobin": hb,
+    "RBC": rbc,
+    "Glucose": glucose,
+    "Cholesterol": cholesterol,
+    "BMI": bmi
+})
+
+# Standardisation
+Z = (df - df.mean()) / df.std()
+
+# Covariance and correlation
+cov = Z.cov()
+corr = Z.corr()
+
+print("Covariance:\n", cov)
+print("Correlation:\n", corr)
+
+# Heatmaps
+fig, ax = plt.subplots(1, 2, figsize=(12, 5))
+
+for a, data, title in [
+    (ax[0], cov, "Covariance"),
+    (ax[1], corr, "Correlation")
+]:
+    im = a.imshow(data, cmap="coolwarm", vmin=-1, vmax=1)
+    a.set_xticks(range(5))
+    a.set_yticks(range(5))
+    a.set_xticklabels(df.columns, rotation=45)
+    a.set_yticklabels(df.columns)
+    a.set_title(title)
+    plt.colorbar(im, ax=a)
+
+plt.tight_layout()
+plt.show()
+
+# Eigenvalues and eigenvectors
+values, vectors = np.linalg.eigh(cov)
+
+idx = np.argsort(values)[::-1]
+values = values[idx]
+vectors = vectors[:, idx]
+
+print("Eigenvalues:", values)
+print("Eigenvectors:\n", vectors)
+
+variance = values / values.sum() * 100
+print("Variance Percentage:", variance)
+
+# Project onto first two principal components
+X_pca = Z.values @ vectors[:, :2]
+
+plt.figure(figsize=(7, 5))
+plt.scatter(X_pca[:, 0], X_pca[:, 1], alpha=0.5)
+plt.xlabel("PC1")
+plt.ylabel("PC2")
+plt.title("PCA Projection of Patients")
+plt.show()
+
+# Eigenvector directions in feature space
+plt.figure(figsize=(7, 5))
+for i in range(2):
+    plt.arrow(0, 0, vectors[0, i], vectors[1, i],
+              head_width=0.05, length_includes_head=True)
+plt.xlabel("Haemoglobin direction")
+plt.ylabel("RBC direction")
+plt.title("Top Two Eigenvector Directions")
+plt.grid()
+plt.show()
