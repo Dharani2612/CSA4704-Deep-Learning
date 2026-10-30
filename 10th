@@ -1,0 +1,112 @@
+
+import numpy as np
+import matplotlib.pyplot as plt
+import tensorflow as tf
+
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score
+
+np.random.seed(42)
+tf.random.set_seed(42)
+
+X, y = make_classification(
+    n_samples=500,
+    n_features=8,
+    n_informative=5,
+    n_redundant=1,
+    random_state=42
+)
+
+Xtrain, Xtest, ytrain, ytest = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+scaler = StandardScaler()
+Xtrain = scaler.fit_transform(Xtrain)
+Xtest = scaler.transform(Xtest)
+
+def build_model(l2=0, dropout=0):
+    reg = tf.keras.regularizers.l2(l2)
+
+    model = tf.keras.Sequential([
+        tf.keras.layers.Input(shape=(8,)),
+        tf.keras.layers.Dense(128, activation="relu",
+                              kernel_regularizer=reg),
+        tf.keras.layers.Dropout(dropout),
+        tf.keras.layers.Dense(128, activation="relu",
+                              kernel_regularizer=reg),
+        tf.keras.layers.Dense(1, activation="sigmoid")
+    ])
+
+    model.compile(
+        optimizer="adam",
+        loss="binary_crossentropy",
+        metrics=["accuracy"]
+    )
+    return model
+
+results = []
+
+configs = [
+    ("Baseline", 0, 0, False),
+    ("L2 0.001", 0.001, 0, False),
+    ("L2 0.01", 0.01, 0, False),
+    ("L2 0.1", 0.1, 0, False),
+    ("Dropout 0.2", 0, 0.2, False),
+    ("Dropout 0.3", 0, 0.3, False),
+    ("Dropout 0.5", 0, 0.5, False),
+    ("Early Stop", 0, 0, True)
+]
+
+for name, l2, dropout, early in configs:
+    model = build_model(l2, dropout)
+
+    callbacks = []
+    if early:
+        callbacks.append(
+            tf.keras.callbacks.EarlyStopping(
+                monitor="val_loss",
+                patience=5,
+                restore_best_weights=True
+            )
+        )
+
+    model.fit(
+        Xtrain, ytrain,
+        epochs=40,
+        batch_size=32,
+        validation_split=0.2,
+        callbacks=callbacks,
+        verbose=0
+    )
+
+    train_acc = model.evaluate(
+        Xtrain, ytrain, verbose=0
+    )[1]
+
+    test_acc = model.evaluate(
+        Xtest, ytest, verbose=0
+    )[1]
+
+    results.append([
+        name, train_acc, test_acc,
+        train_acc-test_acc
+    ])
+
+print("Model | Train | Test | Gap")
+for row in results:
+    print(row)
+
+# Visual comparison
+names = [r[0] for r in results]
+scores = [r[2] for r in results]
+
+plt.figure(figsize=(12,5))
+plt.bar(names, scores)
+plt.xticks(rotation=45)
+plt.ylabel("Test Accuracy")
+plt.title("Regularisation Comparison")
+plt.tight_layout()
+plt.show()
