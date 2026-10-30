@@ -1,0 +1,85 @@
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+np.random.seed(42)
+
+# Generate linearly separable loan data
+X = np.random.randn(100, 2)
+y = (X[:, 0] + X[:, 1] > 0).astype(int)
+
+# Perceptron
+w = np.zeros(2)
+b = 0
+lr = 0.1
+
+updates = []
+
+for epoch in range(50):
+    errors = 0
+
+    for xi, target in zip(X, y):
+        z = np.dot(w, xi) + b
+        pred = int(z >= 0)
+
+        error = target - pred
+        w += lr * error * xi
+        b += lr * error
+
+        errors += abs(error)
+
+    updates.append(errors)
+
+    if errors == 0:
+        break
+
+print("Weights:", w)
+print("Bias:", b)
+print("Epochs:", len(updates))
+
+# Decision boundary
+plt.scatter(X[:, 0], X[:, 1], c=y)
+
+xx = np.linspace(-3, 3, 100)
+yy = -(w[0]*xx+b)/w[1]
+
+plt.plot(xx, yy, color="red")
+plt.title("Perceptron Decision Boundary")
+plt.show()
+
+plt.plot(updates)
+plt.xlabel("Epoch")
+plt.ylabel("Errors")
+plt.title("Weight Learning")
+plt.show()
+
+# XOR
+XOR = np.array([[0,0],[0,1],[1,0],[1,1]])
+YOR = np.array([0,1,1,0])
+
+w = np.zeros(2)
+b = 0
+
+for epoch in range(20):
+    for xi, target in zip(XOR, YOR):
+        pred = int(np.dot(w, xi)+b >= 0)
+        error = target-pred
+        w += 0.1*error*xi
+        b += 0.1*error
+
+print("XOR Predictions:",
+      (XOR @ w+b >= 0).astype(int))
+
+# Activation functions
+z = np.linspace(-5, 5, 100)
+
+step = (z >= 0).astype(int)
+sigmoid = 1/(1+np.exp(-z))
+relu = np.maximum(0, z)
+
+plt.plot(z, step, label="Step")
+plt.plot(z, sigmoid, label="Sigmoid")
+plt.plot(z, relu, label="ReLU")
+plt.legend()
+plt.grid()
+plt.show()
