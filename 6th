@@ -1,0 +1,104 @@
+
+import numpy as np
+import matplotlib.pyplot as plt
+import tensorflow as tf
+
+np.random.seed(42)
+tf.random.set_seed(42)
+
+# Loss function
+def loss(x, y):
+    return x**2 + 5*y**2
+
+def grad(x, y):
+    return np.array([2*x, 10*y])
+
+# Batch GD
+def batch_gd():
+    p = np.array([4.0, 4.0])
+    path = [p.copy()]
+    for _ in range(100):
+        p -= 0.08*grad(*p)
+        path.append(p.copy())
+    return np.array(path)
+
+# SGD
+def sgd():
+    p = np.array([4.0, 4.0])
+    path = [p.copy()]
+    for _ in range(100):
+        g = grad(*p) + np.random.normal(0, 0.5, 2)
+        p -= 0.03*g
+        path.append(p.copy())
+    return np.array(path)
+
+# Momentum
+def momentum():
+    p = np.array([4.0, 4.0])
+    v = np.zeros(2)
+    path = [p.copy()]
+    for _ in range(100):
+        v = 0.9*v + grad(*p)
+        p -= 0.03*v
+        path.append(p.copy())
+    return np.array(path)
+
+paths = [
+    batch_gd(),
+    sgd(),
+    momentum()
+]
+
+x = np.linspace(-5, 5, 100)
+y = np.linspace(-5, 5, 100)
+X, Y = np.meshgrid(x, y)
+
+plt.contour(X, Y, loss(X, Y), levels=25)
+for p, name in zip(paths, ["Batch GD", "SGD", "Momentum"]):
+    plt.plot(p[:, 0], p[:, 1], label=name)
+plt.legend()
+plt.title("Optimiser Paths")
+plt.show()
+
+# Keras regression
+Xdata = np.random.rand(1000, 4)
+Ydata = (Xdata @ np.array([3, 5, 2, 4]) + 2).reshape(-1, 1)
+
+optimizers = {
+    "SGD": tf.keras.optimizers.SGD(0.01),
+    "Momentum": tf.keras.optimizers.SGD(
+        0.01, momentum=0.9
+    ),
+    "Adam": tf.keras.optimizers.Adam(0.01)
+}
+
+histories = {}
+
+for name, optimizer in optimizers.items():
+    model = tf.keras.Sequential([
+        tf.keras.layers.Input(shape=(4,)),
+        tf.keras.layers.Dense(16, activation="relu"),
+        tf.keras.layers.Dense(1)
+    ])
+
+    model.compile(optimizer=optimizer, loss="mse")
+
+    history = model.fit(
+        Xdata, Ydata,
+        epochs=30,
+        batch_size=32,
+        verbose=0,
+        validation_split=0.2
+    )
+
+    histories[name] = history.history["loss"]
+
+for name, values in histories.items():
+    plt.plot(values, label=name)
+
+plt.xlabel("Epochs")
+plt.ylabel("Loss")
+plt.title("Optimiser Comparison")
+plt.legend()
+plt.grid()
+plt.show()
