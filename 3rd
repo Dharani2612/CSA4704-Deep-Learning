@@ -1,0 +1,68 @@
+
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.stats import bernoulli, binom, poisson, uniform, norm
+
+np.random.seed(42)
+
+# Generate distributions
+fig, ax = plt.subplots(2, 3, figsize=(13, 8))
+
+distributions = [
+    (bernoulli, (0.6,), "Bernoulli"),
+    (binom, (10, 0.5), "Binomial"),
+    (poisson, (4,), "Poisson"),
+    (uniform, (0, 1), "Uniform"),
+    (norm, (0, 1), "Gaussian")
+]
+
+for a, (dist, params, name) in zip(ax.flat, distributions):
+    data = dist.rvs(*params, size=1000)
+    a.hist(data, bins=25, density=True, alpha=0.6)
+    a.set_title(name)
+
+plt.tight_layout()
+plt.show()
+
+# Bayes theorem
+prevalence = 0.01
+sensitivity = 0.95
+specificity = 0.90
+
+posterior = (
+    sensitivity * prevalence /
+    (sensitivity * prevalence +
+     (1-specificity)*(1-prevalence))
+)
+
+print("Bayes Probability:", posterior)
+print("Percentage:", posterior*100)
+
+# Simulation of 100000 patients
+N = 100000
+
+disease = np.random.rand(N) < prevalence
+
+positive = np.where(
+    disease,
+    np.random.rand(N) < sensitivity,
+    np.random.rand(N) < (1-specificity)
+)
+
+empirical = disease[positive].mean()
+
+print("Empirical Probability:", empirical)
+
+# Posterior versus prevalence
+p = np.linspace(0.001, 0.20, 100)
+
+post = (sensitivity*p) / (
+    sensitivity*p + (1-specificity)*(1-p)
+)
+
+plt.plot(p*100, post*100)
+plt.xlabel("Disease Prevalence (%)")
+plt.ylabel("Posterior Probability (%)")
+plt.title("Bayesian Posterior Probability")
+plt.grid()
+plt.show()
